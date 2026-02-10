@@ -1,5 +1,7 @@
 // Пример использования с CommonJS
-const { NestedParser, ArrayScheme } = require('./lib/index.cjs');
+// После установки пакета используйте: const { NestedParser, ArrayScheme } = require('nested-parser');
+// Для локальной разработки:
+const { NestedParser, ArrayScheme } = require('./lib/cjs/index.js');
 
 
 async function main() {

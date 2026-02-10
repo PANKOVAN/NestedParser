@@ -92,8 +92,65 @@ root 2
 ```
 ## Установка
 
+### В другом проекте
+
+> ⚠️ **Примечание**: Пакет должен быть либо опубликован в npm, либо использоваться локально.
+
+#### Локальное использование (рекомендуется для разработки)
+
+**Способ 1: npm link**
+```bash
+# В директории NestedParser
+npm link
+
+# В другом проекте
+npm link nested-parser
+```
+
+**Способ 2: Относительный путь**
+В `package.json` другого проекта:
+```json
+{
+  "dependencies": {
+    "nested-parser": "file:../NestedParser"
+  }
+}
+```
+
+**Способ 3: Прямой путь (Windows)**
+```json
+{
+  "dependencies": {
+    "nested-parser": "file:D:/MProjects/NestedParser"
+  }
+}
+```
+
+#### Публикация в npm (для общего доступа)
+
+```bash
+# 1. Соберите проект
+bun run build
+
+# 2. Войдите в npm
+npm login
+
+# 3. Опубликуйте
+npm publish
+# Или для scoped package: npm publish --access public
+```
+
+После публикации:
+```bash
+npm install nested-parser
+```
+
+### Для разработки библиотеки
+
 ```bash
 npm install
+# или
+bun install
 ```
 
 ## Сборка
@@ -116,22 +173,27 @@ npm run clean
 
 ## Использование
 
+> 📖 **Подробная документация по использованию**: см. [USAGE.md](./USAGE.md)
+
 ### CommonJS (Node.js)
 
 ```javascript
-const { NestedParser } = require('nested-parser');
-
-const text = `
-Root
-  Child 1
-  Child 2
-    Grandchild
-`;
+const { NestedParser, ArrayScheme, ObjectScheme } = require('nested-parser');
 
 async function main() {
-    const parser = new NestedParser();
-    const nodes = await parser.parse(text);
-    console.log(nodes);
+    // Использование с ArrayScheme (возвращает массив объектов)
+    const parser1 = new NestedParser({ logParser: false }, new ArrayScheme());
+    const result1 = await parser.parse('./example.txt');
+    console.log(JSON.stringify(result1, null, 2));
+
+    // Использование с ObjectScheme (возвращает объект)
+    const parser2 = new NestedParser({ logParser: false }, new ObjectScheme());
+    const result2 = await parser.parse('./example.txt');
+    console.log(JSON.stringify(result2, null, 2));
+
+    // Использование с логированием (для отладки)
+    const parser3 = new NestedParser({ logParser: true }, new ArrayScheme());
+    await parser3.parse('./example.txt');
 }
 
 main().catch(console.error);
@@ -140,19 +202,26 @@ main().catch(console.error);
 ### ES6 модули
 
 ```javascript
-import { NestedParser } from 'nested-parser';
-
-const text = `
-Root
-  Child 1
-  Child 2
-    Grandchild
-`;
+import { NestedParser, ArrayScheme, ObjectScheme } from 'nested-parser';
 
 async function main() {
-    const parser = new NestedParser();
-    const nodes = await parser.parse(text);
-    console.log(nodes);
+    const parser = new NestedParser({ logParser: false }, new ArrayScheme());
+    const result = await parser.parse('./example.txt');
+    console.log(JSON.stringify(result, null, 2));
+}
+
+main().catch(console.error);
+```
+
+### TypeScript
+
+```typescript
+import { NestedParser, ArrayScheme, ObjectScheme, ParserCallbacks } from 'nested-parser';
+
+async function main() {
+    const parser = new NestedParser({ logParser: false }, new ArrayScheme());
+    const result = await parser.parse('./example.txt');
+    console.log(result);
 }
 
 main().catch(console.error);
@@ -190,11 +259,12 @@ const nodes8 = await parser.parse(() => fs.createReadStream('data.txt'));
 ```
 NestedParser/
 ├── src/              # Исходный код TypeScript
-├── lib/              # Скомпилированный код (все форматы в одном каталоге)
-│   ├── index.cjs     # CommonJS модуль
-│   ├── index.mjs     # ES6 модуль
-│   ├── index.d.ts    # TypeScript определения типов
-│   └── ...           # Остальные файлы библиотеки
+├── lib/              # Скомпилированный код
+│   ├── cjs/          # CommonJS модули
+│   │   └── index.js
+│   ├── esm/          # ES6 модули
+│   │   └── index.js
+│   └── *.d.ts        # TypeScript определения типов
 ├── scripts/          # Вспомогательные скрипты сборки
 ├── tsconfig.json     # Базовая конфигурация TypeScript
 ├── tsconfig.cjs.json # Конфигурация для CommonJS
@@ -206,10 +276,36 @@ Node.js автоматически выберет правильный форм�
 
 ## Разработка
 
-1. Установите зависимости: `npm install`
+1. Установите зависимости: `npm install` или `bun install`
 2. Внесите изменения в `src/`
-3. Соберите проект: `npm run build`
-4. Проверьте результат в `lib/` и `lib-esm/`
+3. Соберите проект: `bun run build` или `npm run build`
+4. Проверьте результат в `lib/`
+
+### Использование в другом проекте (локально)
+
+Если вы разрабатываете библиотеку и хотите протестировать её в другом проекте:
+
+```bash
+# В директории NestedParser
+npm link
+# или
+bun link
+
+# В другом проекте
+npm link nested-parser
+# или
+bun link nested-parser
+```
+
+Или используйте относительный путь в `package.json` другого проекта:
+
+```json
+{
+  "dependencies": {
+    "nested-parser": "file:../path/to/NestedParser"
+  }
+}
+```
 
 ## Лицензия
 
