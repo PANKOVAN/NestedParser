@@ -1,0 +1,42 @@
+{
+    "name": "nested-parser",
+    "version": "1.0.0",
+    "description": "Parser for human-readable hierarchical texts",
+    "main": "lib/cjs/index.js",
+    "module": "lib/esm/index.js",
+    "types": "lib/index.d.ts",
+    "exports": {
+        ".": {
+            "require": "./lib/cjs/index.js",
+            "import": "./lib/esm/index.js",
+            "types": "./lib/index.d.ts"
+        }
+    },
+    "files": [
+        "lib"
+    ],
+    "scripts": {
+        "build": "bun run build:cjs && bun run build:esm && bun run build:types",
+        "build:incremental": "bun run build:cjs:incremental && bun run build:esm:incremental && bun run build:types:incremental",
+        "build:cjs": "bunx tsc -p tsconfig.cjs.json",
+        "build:cjs:incremental": "bunx tsc -p tsconfig.cjs.json --incremental",
+        "build:esm": "bunx tsc -p tsconfig.esm.json",
+        "build:esm:incremental": "bunx tsc -p tsconfig.esm.json --incremental",
+        "build:types": "bunx tsc -p tsconfig.types.json",
+        "build:types:incremental": "bunx tsc -p tsconfig.types.json --incremental",
+        "clean": "bunx rimraf lib",
+        "prepublishOnly": "bun run clean && bun run build"
+    },
+    "keywords": [
+        "parser",
+        "hierarchical",
+        "text"
+    ],
+    "author": "PAN",
+    "license": "MIT",
+    "devDependencies": {
+        "@types/node": "^20.0.0",
+        "rimraf": "^5.0.0",
+        "typescript": "^5.0.0"
+    }
+}
