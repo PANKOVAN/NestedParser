@@ -1,3 +1,4 @@
+import fs from 'fs';
 // Пример использования с CommonJS
 // После установки пакета используйте: const { NestedParser, ArrayScheme } = require('nested-parser');
 // Для локальной разработки:
@@ -7,7 +8,8 @@ const { NestedParser, ArrayScheme } = require('./lib/cjs/index.js');
 async function main() {
     const parser = new NestedParser({ logParser: false }, new ArrayScheme());
 
-    let json = await parser.parse('./example.txt') || {};
+    const stream = fs.createReadStream('example.txt');
+    let json = await parser.parse(stream);
 
     console.log(JSON.stringify(json, undefined, 4));
 

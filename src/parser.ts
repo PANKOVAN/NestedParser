@@ -1,9 +1,28 @@
 import { ParserOptions, ParserInput, ParserCallbacks } from './types';
-import * as fs from 'fs';
-import * as http from 'http';
-import * as https from 'https';
-import { Readable } from 'stream';
-import * as readline from 'readline';
+
+// Conditional imports for Node.js
+let Readable: any;
+let readline: any;
+
+// Detect environment
+const isNode = typeof process !== 'undefined' && process.versions != null && process.versions.node != null;
+
+// Lazy load Node.js modules
+let nodeModulesLoaded = false;
+async function loadNodeModules() {
+    if (nodeModulesLoaded || !isNode) {
+        return;
+    }
+    try {
+        const stream = await import('stream');
+        Readable = stream.Readable;
+        const readlineModule = await import('readline');
+        readline = readlineModule.default || readlineModule;
+        nodeModulesLoaded = true;
+    } catch (e) {
+        // Modules not available
+    }
+}
 
 /**
  * Default parse options
@@ -29,88 +48,132 @@ export class NestedParser {
     }
 
     /**
-     * Gets the input stream from the input source
+     * Creates a line generator from input source
+     * Works directly with streams without loading entire content into memory
      * 
-     * @param input - Input source: string, file path, URL, ReadableStream, or function returning string/stream
-     * @returns Promise that resolves to the readable stream
-     */
-    private async getInputStream(input: ParserInput): Promise<NodeJS.ReadableStream> {
-        // Handle string directly
-        if (typeof input === 'string') {
-            // Check if it's a URL (starts with http:// or https://)
-            if (input.startsWith('http://') || input.startsWith('https://')) {
-                // It's a URL string
-                return await this.getStreamFromUrl(new URL(input));
-            } else if (input.startsWith('file://')) {
-                // It's a file path (by prefix)
-                return this.getStreamFromFile(input.substring(7));
-            } else if (input.startsWith('./') || input.startsWith('../')) {
-                // It's a file path (by prefix)
-                return this.getStreamFromFile(input);
-            } else {
-                // It's just a text string - create a stream from it
-                return Readable.from([input]);
-            }
-        }
-
-        // Handle URL object
-        if (input instanceof URL) {
-            return await this.getStreamFromUrl(input);
-        }
-
-        // Handle ReadableStream
-        if (input instanceof Readable || (typeof input === 'object' && 'read' in input)) {
-            return input as NodeJS.ReadableStream;
-        }
-
-        // Handle function
-        if (typeof input === 'function') {
-            const result = await input();
-            if (typeof result === 'string') {
-                return Readable.from([result]);
-            } else {
-                return result;
-            }
-        }
-        throw new Error('Unsupported input type');
-    }
-
-
-    /**
-     * Gets a stream from a file
-     */
-    private getStreamFromFile(filePath: string): NodeJS.ReadableStream {
-        return fs.createReadStream(filePath, { encoding: 'utf8' });
-    }
-
-    /**
-     * Gets a stream from a URL
-     */
-    private async getStreamFromUrl(url: URL): Promise<NodeJS.ReadableStream> {
-        return new Promise((resolve, reject) => {
-            const client = url.protocol === 'https:' ? https : http;
-
-            client.get(url, (res) => {
-                if (res.statusCode !== 200) {
-                    reject(new Error(`Failed to fetch URL: ${res.statusCode}`));
-                    return;
-                }
-
-                // Response is already a readable stream
-                resolve(res);
-            }).on('error', (err) => {
-                reject(err);
-            });
-        });
-    }
-
-    /**
-     * Reads lines from a ReadableStream
-     * 
-     * @param stream - The readable stream to read from
+     * @param input - Input source: string or ReadableStream
      * @returns Async generator that yields lines
      */
-    private async* readLines(stream: NodeJS.ReadableStream): AsyncGenerator<string, void, unknown> {
+    private async * readLines(input: ParserInput): AsyncGenerator<string, void, unknown> {
+        // Handle string directly
+        if (typeof input === 'string') {
+            const lines = input.split(/\r\n|\n|\r/);
+            for (const line of lines) {
+                yield line;
+            }
+            return;
+        }
+
+        // Handle function - resolve first
+        let resolvedInput: string | ReadableStream<Uint8Array> | NodeJS.ReadableStream;
+        if (typeof input === 'function') {
+            resolvedInput = await input();
+        } else {
+            resolvedInput = input;
+        }
+
+        // Handle Web ReadableStream - read line by line
+        if (resolvedInput instanceof ReadableStream) {
+            yield* this.readLinesFromWebStream(resolvedInput);
+            return;
+        }
+
+        // Handle Node.js ReadableStream - use readline
+        if (isNode && (typeof resolvedInput === 'object' && resolvedInput != null && 'read' in resolvedInput)) {
+            // Load Node.js modules to check if it's a Readable stream
+            await loadNodeModules();
+            if (Readable && (resolvedInput instanceof Readable || (typeof resolvedInput === 'object' && resolvedInput != null && 'read' in resolvedInput))) {
+                yield* this.readLinesFromNodeStream(resolvedInput as NodeJS.ReadableStream);
+                return;
+            }
+        }
+
+        // Handle string from function
+        if (typeof resolvedInput === 'string') {
+            const lines = resolvedInput.split(/\r\n|\n|\r/);
+            for (const line of lines) {
+                yield line;
+            }
+            return;
+        }
+
+        throw new Error('Unsupported input type. Expected string or ReadableStream.');
+    }
+
+    /**
+     * Reads lines from Web ReadableStream line by line
+     * Doesn't load entire stream into memory
+     */
+    private async * readLinesFromWebStream(stream: ReadableStream<Uint8Array>): AsyncGenerator<string, void, unknown> {
+        const reader = stream.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        try {
+            while (true) {
+                const { done, value } = await reader.read();
+
+                if (done) {
+                    // Process remaining buffer
+                    if (buffer.length > 0) {
+                        yield buffer;
+                    }
+                    break;
+                }
+
+                // Decode chunk and add to buffer
+                buffer += decoder.decode(value, { stream: true });
+
+                // Split buffer by line endings
+                while (true) {
+                    const newlineIndex = buffer.indexOf('\n');
+                    if (newlineIndex === -1) {
+                        // Check for \r without \n
+                        const crIndex = buffer.indexOf('\r');
+                        if (crIndex === -1) {
+                            break; // No line ending found, wait for more data
+                        }
+                        // Found \r, yield line
+                        const line = buffer.substring(0, crIndex);
+                        buffer = buffer.substring(crIndex + 1);
+                        yield line;
+                    } else {
+                        // Found \n, check if preceded by \r
+                        const line = buffer.substring(0, newlineIndex).replace(/\r$/, '');
+                        buffer = buffer.substring(newlineIndex + 1);
+                        yield line;
+                    }
+                }
+            }
+            // Decode any remaining bytes
+            const remaining = decoder.decode();
+            if (remaining.length > 0) {
+                buffer += remaining;
+                if (buffer.length > 0) {
+                    yield buffer;
+                }
+            }
+        } finally {
+            reader.releaseLock();
+        }
+    }
+
+    /**
+     * Reads lines from Node.js ReadableStream using readline
+     * Already works line by line, no need to load entire stream
+     */
+    private async * readLinesFromNodeStream(stream: NodeJS.ReadableStream): AsyncGenerator<string, void, unknown> {
+        if (!isNode) {
+            throw new Error('Node.js stream reading is only available in Node.js');
+        }
+
+        // Load Node.js modules if not already loaded
+        await loadNodeModules();
+
+        if (!readline) {
+            throw new Error('readline module is not available');
+        }
+
         const rl = readline.createInterface({
             input: stream,
             crlfDelay: Infinity, // Handle both \r\n and \n
@@ -122,13 +185,13 @@ export class NestedParser {
     }
     /**
      * Parses a hierarchical text into a tree structure
+     * Works in both Node.js and browser environments
+     * Reads directly from stream line by line without loading entire content
      * 
-     * @param input - Input source: string, file path, URL, ReadableStream, or function returning string/stream
-     * @returns Promise that resolves to array of root nodes
+     * @param input - Input source: string or ReadableStream
+     * @returns Promise that resolves to parsed result
      */
     async parse(input: ParserInput): Promise<any | void> {
-        const stream = await this.getInputStream(input);
-
         let lineNumber: number = 0;
         let levels: number[] = [];
         let useSpace: boolean = false;
@@ -138,7 +201,7 @@ export class NestedParser {
 
         this.invokeCallback('parserStarted', lineNumber);
 
-        const linesGenerator = this.readLines(stream);
+        const linesGenerator = this.readLines(input);
         for await (const line of linesGenerator) {
             lineNumber++;
             // Set level and test indentation consistency
@@ -186,20 +249,18 @@ export class NestedParser {
 
                 while (this.countBackQuotes(lineContent) % 2 !== 0 || lineContent.endsWith(',') || lineContent.endsWith(',\n')) {
                     let nextLine = await linesGenerator.next();
-                    lineNumber++;
-
-                    let commentLine: string = (nextLine.value || '').trim()
-                    if (commentLine.startsWith('#')) {
-                        this.invokeCallback('commentDetected', lineNumber, commentLine);
-                        continue;
-                    }
-
                     if (nextLine.done) {
                         if (this.countBackQuotes(lineContent) % 2 !== 0)
                             this.invokeCallback('errorDetected', lineNumber, 'Unbalanced back quotes');
                         break;
                     }
+                    lineNumber++;
 
+                    let commentLine: string = (nextLine.value || '').trim();
+                    if (commentLine.startsWith('#')) {
+                        this.invokeCallback('commentDetected', lineNumber, commentLine);
+                        continue;
+                    }
 
                     lineContent += '\n' + nextLine.value.trim();
                 }

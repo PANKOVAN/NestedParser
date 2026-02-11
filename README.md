@@ -1,6 +1,7 @@
+
 # NestedParser
 
-**NestedParser** - библиотека для разбора иерархических удобочитаемых текстов с упрощенной разметкой (human-readable hierarchical texts). Предусмотрено два режима работы
+**NestedParser** - универсальная библиотека для разбора иерархических удобочитаемых текстов с упрощенной разметкой (human-readable hierarchical texts). Работает как в Node.js, так и в браузере. Предусмотрено два режима работы
 - парсинг - обход текста и вызов пользовательских callback функций
 - использование схемы данных - парсинг с возвратом результата в виде JSON, который формируется в соответствии с выбранной схемой.
 
@@ -8,12 +9,9 @@
 
 ## Понятия
 - исходный текст - текст, который используется для парсинга. Текст состоит из строк разделенных символами '\n' или '\r\n'. Допускаются следующие варианты:
-    - просто текстовая строка
-    - имя файла - строка, которая начинается с 'file://' или './' или '../'
-    - url - строка, которая начинается с 'http://' или 'https://' 
-    - URL - объект URL
-    - stream - поток (ReadableStream)
-    - function - функция, которая возвращает строку или поток
+    - текстовая строка - прямая строка с данными
+    - ReadableStream - поток данных (Web ReadableStream или Node.js ReadableStream)
+    - function - функция, которая возвращает строку или ReadableStream
 - специальные символы - '\n', '`', ';' - используются при разметке текста
 - уровень иерархии - количество пробелов (символов табуляции) в начале строки до первого не пробельного символа. Нельзя использовать смесь из табуляций и пробелов. При переходе на следующий(более высокий) уровень иерархии должен быть просто больше чем у предыдущей. При сохранении или переходе на предыдущий(более низкий) уровень иерархии должен совпадать с текущим или одним из предыдущих. Условие, что все уровни иерархии должны быть кратны определенному значению (например 2 или 4) - необязательно.
 - комментарий - строка, которая начинается с символа '#', перед которым может быть любое количество пробелов, комментарии не изменяют текущий уровень иерархии, конечные комментарии запрещены
@@ -33,9 +31,6 @@
 - **valuesDetected** - значения выделены
 - **commentDetected** - встречены комментарии
 - **errorDetected** - встречена ошибка
-
-
-Все обработчики имеют одинаковый интерфейс. В обработчик передается два параметра номер текущей строки и значение. Если не задан обработчика ошибок, то выбрасывается исключение.
 
 ## Пример
 
@@ -90,152 +85,107 @@ root 2
 - valuesDetected(12, '2')
 - parseEnded(undefined, undefined)
 ```
+
 ## Установка
 
-### В другом проекте
-
-> ⚠️ **Примечание**: Пакет должен быть либо опубликован в npm, либо использоваться локально.
-
-#### Локальное использование (рекомендуется для разработки)
-
-**Способ 1: npm link**
-```bash
-# В директории NestedParser
-npm link
-
-# В другом проекте
-npm link nested-parser
-```
-
-**Способ 2: Относительный путь**
-В `package.json` другого проекта:
-```json
-{
-  "dependencies": {
-    "nested-parser": "file:../NestedParser"
-  }
-}
-```
-
-**Способ 3: Прямой путь (Windows)**
-```json
-{
-  "dependencies": {
-    "nested-parser": "file:D:/MProjects/NestedParser"
-  }
-}
-```
-
-#### Публикация в npm (для общего доступа)
-
-**Вариант 1: GitHub Packages (рекомендуется)**
+### npm
 
 ```bash
-# 1. Соберите проект
-bun run build
-
-# 2. Войдите в GitHub Packages
-npm login --registry=https://npm.pkg.github.com --scope=@pankovan
-
-# 3. Опубликуйте
-npm publish
-```
-
-После публикации:
-```bash
-# В проекте-потребителе создайте .npmrc:
-# @pankovan:registry=https://npm.pkg.github.com
-# //npm.pkg.github.com/:_authToken=YOUR_GITHUB_TOKEN
-
 npm install @pankovan/nested-parser
 ```
 
-📖 **Подробная инструкция**: см. [GITHUB_PACKAGES.md](./GITHUB_PACKAGES.md)
-
-**Вариант 2: npm registry**
+### bun
 
 ```bash
-# 1. Соберите проект
-bun run build
-
-# 2. Войдите в npm
-npm login
-
-# 3. Опубликуйте
-npm publish
-# Или для scoped: npm publish --access public
+bun add @pankovan/nested-parser
 ```
 
-После публикации:
-```bash
-npm install nested-parser
-```
-
-📖 **Подробная инструкция**: см. [PUBLISH.md](./PUBLISH.md)
-
-### Для разработки библиотеки
+### yarn
 
 ```bash
-npm install
-# или
-bun install
+yarn add @pankovan/nested-parser
 ```
 
-## Сборка
-
-Библиотека поддерживает сборку в два формата: CommonJS и ES6 модули.
+### pnpm
 
 ```bash
-# Сборка обоих форматов
-npm run build
-
-# Сборка только CommonJS
-npm run build:cjs
-
-# Сборка только ES6 модулей
-npm run build:esm
-
-# Очистка сборочных директорий
-npm run clean
+pnpm add @pankovan/nested-parser
 ```
+
+> ⚠️ **Примечание**: Если пакет ещё не опубликован, используйте локальное подключение через `npm link` или относительный путь в `package.json`:
+> ```json
+> {
+>   "dependencies": {
+>     "@pankovan/nested-parser": "file:../NestedParser"
+>   }
+> }
+> ```
 
 ## Использование
 
-> 📖 **Подробная документация по использованию**: см. [USAGE.md](./USAGE.md)
-
-### CommonJS (Node.js)
+### Базовый пример (Node.js)
 
 ```javascript
-const { NestedParser, ArrayScheme, ObjectScheme } = require('nested-parser');
+const { NestedParser, ArrayScheme } = require('@pankovan/nested-parser');
 
 async function main() {
-    // Использование с ArrayScheme (возвращает массив объектов)
-    const parser1 = new NestedParser({ logParser: false }, new ArrayScheme());
-    const result1 = await parser.parse('./example.txt');
-    console.log(JSON.stringify(result1, null, 2));
-
-    // Использование с ObjectScheme (возвращает объект)
-    const parser2 = new NestedParser({ logParser: false }, new ObjectScheme());
-    const result2 = await parser.parse('./example.txt');
-    console.log(JSON.stringify(result2, null, 2));
-
-    // Использование с логированием (для отладки)
-    const parser3 = new NestedParser({ logParser: true }, new ArrayScheme());
-    await parser3.parse('./example.txt');
+    const parser = new NestedParser({ logParser: false }, new ArrayScheme());
+    
+    // Парсинг из строки
+    const result = await parser.parse(`
+        root 1
+            child1 value1
+            child2 value2
+                grandchild value3
+    `);
+    
+    console.log(JSON.stringify(result, null, 2));
 }
 
 main().catch(console.error);
 ```
 
+**Результат:**
+```json
+[
+  {
+    "name": "root",
+    "values": ["1"],
+    "children": [
+      {
+        "name": "child1",
+        "values": ["value1"]
+      },
+      {
+        "name": "child2",
+        "values": ["value2"],
+        "children": [
+          {
+            "name": "grandchild",
+            "values": ["value3"]
+          }
+        ]
+      }
+    ]
+  }
+]
+```
+
 ### ES6 модули
 
 ```javascript
-import { NestedParser, ArrayScheme, ObjectScheme } from 'nested-parser';
+import { NestedParser, ArrayScheme, ObjectScheme } from '@pankovan/nested-parser';
 
 async function main() {
-    const parser = new NestedParser({ logParser: false }, new ArrayScheme());
-    const result = await parser.parse('./example.txt');
-    console.log(JSON.stringify(result, null, 2));
+    // Использование с ArrayScheme (возвращает массив объектов)
+    const parser1 = new NestedParser({ logParser: false }, new ArrayScheme());
+    const result1 = await parser1.parse('root 1\n    child1 value1');
+    console.log(result1);
+    
+    // Использование с ObjectScheme (возвращает объект)
+    const parser2 = new NestedParser({ logParser: false }, new ObjectScheme());
+    const result2 = await parser2.parse('root 1\n    child1 value1');
+    console.log(result2);
 }
 
 main().catch(console.error);
@@ -244,97 +194,229 @@ main().catch(console.error);
 ### TypeScript
 
 ```typescript
-import { NestedParser, ArrayScheme, ObjectScheme, ParserCallbacks } from 'nested-parser';
+import { NestedParser, ArrayScheme, ObjectScheme, ParserCallbacks } from '@pankovan/nested-parser';
 
 async function main() {
     const parser = new NestedParser({ logParser: false }, new ArrayScheme());
-    const result = await parser.parse('./example.txt');
+    const result = await parser.parse('root 1\n    child1 value1');
     console.log(result);
 }
 
 main().catch(console.error);
 ```
 
-### Различные типы входных данных
+### Парсинг из файла (Node.js)
 
 ```javascript
-import { NestedParser } from 'nested-parser';
-
-const parser = new NestedParser();
-
-// Текстовая строка
-const nodes1 = await parser.parse('Root\n  Child');
-
-// Путь к файлу
-const nodes2 = await parser.parse('./data.txt');
-const nodes3 = await parser.parse('file:///path/to/file.txt');
-
-// URL
-const nodes4 = await parser.parse('https://example.com/data.txt');
-const nodes5 = await parser.parse(new URL('https://example.com/data.txt'));
-
-// ReadableStream
+import { NestedParser, ArrayScheme } from '@pankovan/nested-parser';
 import fs from 'fs';
-const nodes6 = await parser.parse(fs.createReadStream('data.txt'));
 
-// Функция
-const nodes7 = await parser.parse(() => 'Root\n  Child');
-const nodes8 = await parser.parse(() => fs.createReadStream('data.txt'));
+async function main() {
+    const parser = new NestedParser({ logParser: false }, new ArrayScheme());
+    
+    // Чтение из файла через stream
+    const stream = fs.createReadStream('./example.txt');
+    const result = await parser.parse(stream);
+    
+    console.log(JSON.stringify(result, null, 2));
+}
+
+main().catch(console.error);
 ```
 
-## Структура проекта
+### Парсинг из URL (браузер или Node.js 18+)
 
-```
-NestedParser/
-├── src/              # Исходный код TypeScript
-├── lib/              # Скомпилированный код
-│   ├── cjs/          # CommonJS модули
-│   │   └── index.js
-│   ├── esm/          # ES6 модули
-│   │   └── index.js
-│   └── *.d.ts        # TypeScript определения типов
-├── scripts/          # Вспомогательные скрипты сборки
-├── tsconfig.json     # Базовая конфигурация TypeScript
-├── tsconfig.cjs.json # Конфигурация для CommonJS
-├── tsconfig.esm.json # Конфигурация для ES6 модулей
-└── tsconfig.types.json # Конфигурация для типов
-```
+```javascript
+import { NestedParser, ArrayScheme } from '@pankovan/nested-parser';
 
-Node.js автоматически выберет правильный формат на основе условий в `package.json` exports.
+async function main() {
+    const parser = new NestedParser({ logParser: false }, new ArrayScheme());
+    
+    // Сначала получаем текст через fetch
+    const response = await fetch('https://example.com/data.txt');
+    const text = await response.text();
+    
+    // Парсим текст
+    const result = await parser.parse(text);
+    console.log(result);
+    
+    // Или используем stream напрямую
+    const response2 = await fetch('https://example.com/data.txt');
+    const result2 = await parser.parse(response2.body); // ReadableStream
+    console.log(result2);
+}
 
-## Разработка
-
-1. Установите зависимости: `npm install` или `bun install`
-2. Внесите изменения в `src/`
-3. Соберите проект: `bun run build` или `npm run build`
-4. Проверьте результат в `lib/`
-
-### Использование в другом проекте (локально)
-
-Если вы разрабатываете библиотеку и хотите протестировать её в другом проекте:
-
-```bash
-# В директории NestedParser
-npm link
-# или
-bun link
-
-# В другом проекте
-npm link nested-parser
-# или
-bun link nested-parser
+main().catch(console.error);
 ```
 
-Или используйте относительный путь в `package.json` другого проекта:
+### Парсинг из File (браузер)
 
+```html
+<input type="file" id="fileInput" accept=".txt">
+
+<script type="module">
+  import { NestedParser, ArrayScheme } from '@pankovan/nested-parser';
+  
+  document.getElementById('fileInput').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (file) {
+          const parser = new NestedParser({ logParser: false }, new ArrayScheme());
+          
+          // Читаем файл как текст
+          const text = await file.text();
+          const result = await parser.parse(text);
+          
+          console.log(result);
+      }
+  });
+</script>
+```
+
+### Использование с ObjectScheme
+
+```javascript
+import { NestedParser, ObjectScheme } from '@pankovan/nested-parser';
+
+async function main() {
+    const parser = new NestedParser({ logParser: false }, new ObjectScheme());
+    const result = await parser.parse(`
+        server
+            host localhost
+            port 3000
+        database
+            name mydb
+            user admin
+    `);
+    
+    console.log(JSON.stringify(result, null, 2));
+}
+```
+
+**Результат:**
 ```json
 {
-  "dependencies": {
-    "nested-parser": "file:../path/to/NestedParser"
+  "server": {
+    "values": [],
+    "host": {
+      "values": ["localhost"]
+    },
+    "port": {
+      "values": ["3000"]
+    }
+  },
+  "database": {
+    "values": [],
+    "name": {
+      "values": ["mydb"]
+    },
+    "user": {
+      "values": ["admin"]
+    }
   }
 }
 ```
 
-## Лицензия
+### Использование с логированием (для отладки)
 
-MIT
+```javascript
+import { NestedParser, ArrayScheme } from '@pankovan/nested-parser';
+
+async function main() {
+    // Включите logParser для вывода всех событий в консоль
+    const parser = new NestedParser({ logParser: true }, new ArrayScheme());
+    const result = await parser.parse('root 1\n    child1 value1');
+    // Все события парсинга будут выведены в консоль
+}
+```
+
+### Создание собственной схемы
+
+```javascript
+import { NestedParser, ParserCallbacks } from '@pankovan/nested-parser';
+
+class CustomScheme {
+    constructor() {
+        this.data = {};
+        this.currentPath = [];
+    }
+
+    parserStarted() {
+        this.data = {};
+        this.currentPath = [];
+    }
+
+    parserEnded() {
+        return this.data;
+    }
+
+    nameDetected(lineNumber, name) {
+        // Ваша логика обработки имени
+        console.log(`Found name: ${name} at line ${lineNumber}`);
+    }
+
+    valuesDetected(lineNumber, values) {
+        // Ваша логика обработки значений
+        console.log(`Found values:`, values);
+    }
+
+    levelUp(lineNumber) {
+        // Переход на следующий уровень
+    }
+
+    levelDown(lineNumber) {
+        // Переход на предыдущий уровень
+    }
+}
+
+const parser = new NestedParser({ logParser: false }, new CustomScheme());
+const result = await parser.parse('root 1\n    child1 value1');
+```
+
+### Различные типы входных данных
+
+NestedParser принимает только **строку** или **ReadableStream**:
+
+#### Строка
+
+```javascript
+import { NestedParser, ArrayScheme } from '@pankovan/nested-parser';
+
+const parser = new NestedParser({ logParser: false }, new ArrayScheme());
+
+// Прямая строка
+const result1 = await parser.parse('Root\n  Child');
+
+// Функция, возвращающая строку
+const result2 = await parser.parse(() => 'Root\n  Child');
+
+// Асинхронная функция
+const result3 = await parser.parse(async () => {
+    const response = await fetch('https://example.com/data.txt');
+    return await response.text();
+});
+```
+
+#### ReadableStream
+
+```javascript
+import { NestedParser, ArrayScheme } from '@pankovan/nested-parser';
+
+const parser = new NestedParser({ logParser: false }, new ArrayScheme());
+
+// Node.js ReadableStream
+import fs from 'fs';
+const nodeStream = fs.createReadStream('data.txt');
+const result1 = await parser.parse(nodeStream);
+
+// Web ReadableStream (браузер или Node.js 18+)
+const response = await fetch('https://example.com/data.txt');
+const webStream = response.body; // ReadableStream
+const result2 = await parser.parse(webStream);
+
+// Функция, возвращающая stream
+const result3 = await parser.parse(() => fs.createReadStream('data.txt'));
+```
+
+> 💡 **Важно**: Парсер читает из потока построчно, не загружая весь файл в память. Это эффективно для больших файлов!
+
+> ✅ **Упрощённый API**: Только строка и stream - работает везде одинаково!

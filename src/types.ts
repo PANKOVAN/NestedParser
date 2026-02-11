@@ -9,12 +9,14 @@ export interface ParserOptions {
 
 /**
  * Input source types for NestedParser
+ * Works in both Node.js and browser environments
  */
 export type ParserInput =
     | string
-    | URL
-    | NodeJS.ReadableStream
+    | ReadableStream<Uint8Array>  // Web Streams API (universal)
+    | NodeJS.ReadableStream       // Node.js streams
     | (() => string | Promise<string>)
+    | (() => ReadableStream<Uint8Array> | Promise<ReadableStream<Uint8Array>>)
     | (() => NodeJS.ReadableStream | Promise<NodeJS.ReadableStream>);
 
 
