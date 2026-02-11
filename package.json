@@ -1,7 +1,14 @@
 {
-    "name": "nested-parser",
+    "name": "@pankovan/nested-parser",
     "version": "1.0.0",
     "description": "Parser for human-readable hierarchical texts",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/PANKOVAN/NestedParser.git"
+    },
+    "publishConfig": {
+        "registry": "https://npm.pkg.github.com"
+    },
     "main": "lib/cjs/index.js",
     "module": "lib/esm/index.js",
     "types": "lib/index.d.ts",

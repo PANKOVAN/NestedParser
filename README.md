@@ -128,6 +128,32 @@ npm link nested-parser
 
 #### Публикация в npm (для общего доступа)
 
+**Вариант 1: GitHub Packages (рекомендуется)**
+
+```bash
+# 1. Соберите проект
+bun run build
+
+# 2. Войдите в GitHub Packages
+npm login --registry=https://npm.pkg.github.com --scope=@pankovan
+
+# 3. Опубликуйте
+npm publish
+```
+
+После публикации:
+```bash
+# В проекте-потребителе создайте .npmrc:
+# @pankovan:registry=https://npm.pkg.github.com
+# //npm.pkg.github.com/:_authToken=YOUR_GITHUB_TOKEN
+
+npm install @pankovan/nested-parser
+```
+
+📖 **Подробная инструкция**: см. [GITHUB_PACKAGES.md](./GITHUB_PACKAGES.md)
+
+**Вариант 2: npm registry**
+
 ```bash
 # 1. Соберите проект
 bun run build
@@ -137,13 +163,15 @@ npm login
 
 # 3. Опубликуйте
 npm publish
-# Или для scoped package: npm publish --access public
+# Или для scoped: npm publish --access public
 ```
 
 После публикации:
 ```bash
 npm install nested-parser
 ```
+
+📖 **Подробная инструкция**: см. [PUBLISH.md](./PUBLISH.md)
 
 ### Для разработки библиотеки
 

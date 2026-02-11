@@ -10,6 +10,7 @@ lib-temp/
 **/*.tsbuildinfo
 
 # IDE
+.*.md
 .vscode/
 .idea/
 *.swp
