@@ -9,6 +9,11 @@ lib-temp/
 *.tsbuildinfo
 **/*.tsbuildinfo
 
+# Tests
+coverage/
+*.test.js
+*.test.js.map
+
 # IDE
 .*.md
 .vscode/

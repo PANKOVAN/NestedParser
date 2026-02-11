@@ -420,3 +420,45 @@ const result3 = await parser.parse(() => fs.createReadStream('data.txt'));
 > 💡 **Важно**: Парсер читает из потока построчно, не загружая весь файл в память. Это эффективно для больших файлов!
 
 > ✅ **Упрощённый API**: Только строка и stream - работает везде одинаково!
+
+## Тестирование
+
+Проект использует встроенный тестовый фреймворк Bun для unit-тестов.
+
+### Запуск тестов
+
+```bash
+# Запустить все тесты
+bun test
+
+# Запустить тесты в режиме watch
+bun test --watch
+
+# Запустить тесты с покрытием
+bun test --coverage
+```
+
+### Структура тестов
+
+- `src/parser.test.ts` - тесты для NestedParser
+- `src/array.scheme.test.ts` - тесты для ArrayScheme
+- `src/object.scheme.test.ts` - тесты для ObjectScheme
+- `src/integration.test.ts` - интеграционные тесты
+
+### Пример теста
+
+```typescript
+import { describe, test, expect } from 'bun:test';
+import { NestedParser, ArrayScheme } from './parser';
+
+describe('NestedParser', () => {
+    test('должен парсить простую строку', async () => {
+        const parser = new NestedParser({ logParser: false }, new ArrayScheme());
+        const result = await parser.parse('root 1');
+        
+        expect(result).toBeDefined();
+        expect(result[0].name).toBe('root');
+        expect(result[0].values).toEqual(['1']);
+    });
+});
+```

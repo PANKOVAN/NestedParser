@@ -3,6 +3,7 @@
     "target": "ES2020",
     "module": "ESNext",
     "lib": ["ES2020"],
+    "types": ["bun-types"],
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
@@ -12,11 +13,11 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "incremental": true
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "lib", "lib-temp"]
+  "exclude": ["node_modules", "lib", "lib-temp", "src/**/*.test.ts"]
 }
 
